@@ -13,7 +13,7 @@ class Phase2 implements ContainerInjectionInterface {
    */
   private $uuidService;
 
-  private $urlStorage;
+  private $urlStorage = [];
 
   public function __construct(UuidInterface $uuidService) {
     $this->uuidService = $uuidService;
@@ -26,15 +26,21 @@ class Phase2 implements ContainerInjectionInterface {
   }
 
   public function register(string $url) : string {
-
-    if (isset($this->urlStorage[$url])) {
-      throw new \Exception("Url already registered.");
+    if (in_array($url, $this->urlStorage)) {
+      throw new \Exception('Url already registered.');
     }
 
     $uuid = $this->uuidService->generate();
-    $this->urlStorage[$url] = ['uuid' => $uuid];
+    $this->urlStorage[$uuid] = $url;
 
     return $uuid;
+  }
+
+  public function retrieveLocalUrl(string $uuid) : string {
+    if (!isset($this->urlStorage[$uuid])) {
+      throw new \Exception('Unknown url.');
+    }
+    return $this->urlStorage[$uuid];
   }
 
 }
