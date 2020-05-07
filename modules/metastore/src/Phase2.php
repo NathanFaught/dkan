@@ -13,6 +13,8 @@ class Phase2 implements ContainerInjectionInterface {
    */
   private $uuidService;
 
+  private $urlStorage;
+
   public function __construct(UuidInterface $uuidService) {
     $this->uuidService = $uuidService;
   }
@@ -24,7 +26,15 @@ class Phase2 implements ContainerInjectionInterface {
   }
 
   public function register(string $url) : string {
-    return $this->uuidService->generate();
+
+    if (isset($this->urlStorage[$url])) {
+      throw new \Exception("Url already registered.");
+    }
+
+    $uuid = $this->uuidService->generate();
+    $this->urlStorage[$url] = ['uuid' => $uuid];
+
+    return $uuid;
   }
 
 }

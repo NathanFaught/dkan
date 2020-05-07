@@ -18,7 +18,15 @@ class Phase2Test extends TestCase {
 
     $uuidReturned = $p2->register("s3://bucket/filename.ext");
     $this->assertTrue(Uuid::isValid($uuidReturned));
+  }
 
+  public function testRegisterAlreadyExisting() {
+    $container = $this->getCommonMockChain();
+    $p2 = Phase2::create($container->getMock());
+
+    $p2->register("s3://bucket/filename.ext");
+    $this->expectExceptionMessage("Url already registered.");
+    $p2->register("s3://bucket/filename.ext");
   }
 
   private function getCommonMockChain() {
