@@ -2,11 +2,16 @@
 
 namespace Drupal\metastore;
 
+use Drupal\Component\Uuid\Php;
+use Drupal\Component\Uuid\Uuid;
 use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\pqdc_content\FileFetcher\Processor\S3;
+use Drupal\pqdc_content\Util;
+use FileFetcher\FileFetcher;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class Phase2 implements ContainerInjectionInterface {
+class Phase2 extends FileFetcher implements ContainerInjectionInterface {
 
   /**
    * @var \Drupal\Component\Uuid\UuidInterface
@@ -25,13 +30,26 @@ class Phase2 implements ContainerInjectionInterface {
     );
   }
 
-  public function register(string $url) : string {
-    if (in_array($url, $this->urlStorage)) {
-      throw new \Exception('Url already registered.');
-    }
+  public static function register(string $url) : string {
+    $uuid = (new Php())->generate();
 
-    $uuid = $this->uuidService->generate();
-    $this->urlStorage[$uuid] = $url;
+    /** @var \Drupal\datastore\Storage\JobStoreFactory $storage */
+    $storageService = \Drupal::service('datastore.job_store_factory');
+    $storage = $storageService->getInstance('remote_files', []);
+
+    $publicPath = Util::getDrupalsPublicFilesDirectory();
+    $distributionPath = $publicPath + '/distributions/' . $uuid ;
+    Util::prepareDirectory($distributionPath);
+
+    $fileFetcherConfig = [
+      'filePath' => $url,
+      'processors' => [S3::class],
+      'temporaryDirectory' => $distributionPath,
+    ];
+
+    $phase2 = self::get($uuid, $storage, $fileFetcherConfig);
+    // @Todo: place in a queueWorker job
+    $phase2->run();
 
     return $uuid;
   }
